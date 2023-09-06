@@ -1080,6 +1080,7 @@ func swapPVs(ctx context.Context, w *log.Logger, clientset k8sclient.Interface, 
 	}
 
 	// delete the original PV
+	w.Printf("value is now", DeletePV)
 	if DeletePV  == true {
 		w.Printf("Deleting original, now redundant, PV %s\n", originalPVC.Spec.VolumeName)
 		err = clientset.CoreV1().PersistentVolumes().Delete(ctx, originalPVC.Spec.VolumeName, metav1.DeleteOptions{})

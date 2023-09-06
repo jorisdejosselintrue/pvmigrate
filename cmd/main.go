@@ -39,7 +39,7 @@ func main() {
 	flag.StringVar(&options.Namespace, "namespace", "", "only migrate PVCs within this namespace")
 	flag.BoolVar(&options.SetDefaults, "set-defaults", false, "change default storage class from source to dest")
 	flag.BoolVar(&options.VerboseCopy, "verbose-copy", false, "show output from the rsync command used to copy data between PVCs")
-	flag.BoolVar(&options.DeletePV, "delete-pv", false, "toggle if PV should be deleted")
+	flag.BoolVar(&options.DeletePV, "delete-pv", true, "toggle if PV should be deleted")
 	flag.BoolVar(&options.SkipSourceValidation, "skip-source-validation", false, "migrate from PVCs using a particular StorageClass name, even if that StorageClass does not exist")
 	flag.IntVar(&podReadyTimeout, "pod-ready-timeout", 60, "length of time to wait (in seconds) for validation pod(s) to go into Ready phase")
 	flag.IntVar(&deletePVTimeout, "delete-pv-timeout", 300, "length of time to wait (in seconds) for backing PV to be removed when temporary PVC is deleted")
@@ -59,6 +59,7 @@ func main() {
 
 	// setup logger
 	logger := log.New(os.Stderr, "", 0) // this has no time prefix etc
+	logger.Printf("bool is set to: %s", options.DeletePV)
 
 	// setup k8s
 	cfg, err := config.GetConfig()

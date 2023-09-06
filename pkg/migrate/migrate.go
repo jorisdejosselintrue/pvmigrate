@@ -49,6 +49,7 @@ type Options struct {
 	SetDefaults          bool
 	VerboseCopy          bool
 	SkipSourceValidation bool
+	DeletePV						 bool
 	PodReadyTimeout      time.Duration
 	DeletePVTimeout      time.Duration
 }
@@ -77,7 +78,7 @@ func Migrate(ctx context.Context, w *log.Logger, clientset k8sclient.Interface, 
 
 	for ns, nsPVCs := range matchingPVCs {
 		for _, nsPVC := range nsPVCs {
-			err = swapPVs(ctx, w, clientset, ns, nsPVC.claim.Name)
+			err = swapPVs(ctx, w, clientset, ns, nsPVC.claim.Name, options.DeletePV)
 			if err != nil {
 				return fmt.Errorf("failed to swap PVs for PVC %s in %s: %w", nsPVC.claim.Name, ns, err)
 			}
@@ -947,7 +948,7 @@ func scaleUpPods(ctx context.Context, w *log.Logger, clientset k8sclient.Interfa
 }
 
 // given the name of a PVC, swap the underlying PV with the one used by <pvcname>-pvcmigrate, delete the PVC <pvcname>-migrate, and delete the original PV
-func swapPVs(ctx context.Context, w *log.Logger, clientset k8sclient.Interface, ns string, pvcName string) error {
+func swapPVs(ctx context.Context, w *log.Logger, clientset k8sclient.Interface, ns string, pvcName string, DeletePV bool) error {
 	w.Printf("\nSwapping PVC %s in %s to the new StorageClass", pvcName, ns)
 
 	// get the two relevant PVCs - the (original) one that has the name we want, and the one that has the PV we want
@@ -1079,12 +1080,13 @@ func swapPVs(ctx context.Context, w *log.Logger, clientset k8sclient.Interface, 
 	}
 
 	// delete the original PV
-	w.Printf("Deleting original, now redundant, PV %s\n", originalPVC.Spec.VolumeName)
-	err = clientset.CoreV1().PersistentVolumes().Delete(ctx, originalPVC.Spec.VolumeName, metav1.DeleteOptions{})
-	if err != nil {
-		w.Printf("Unable to cleanup redundant PV %s: %s\n", originalPVC.Spec.VolumeName, err.Error())
+	if DeletePV  == true {
+		w.Printf("Deleting original, now redundant, PV %s\n", originalPVC.Spec.VolumeName)
+		err = clientset.CoreV1().PersistentVolumes().Delete(ctx, originalPVC.Spec.VolumeName, metav1.DeleteOptions{})
+		if err != nil {
+			w.Printf("Unable to cleanup redundant PV %s: %s\n", originalPVC.Spec.VolumeName, err.Error())
+		}
 	}
-
 	// success message
 	w.Printf("Successfully migrated PVC %s in %s from PV %s to %s\n", pvcName, ns, originalPVC.Spec.VolumeName, migratedPVC.Spec.VolumeName)
 	return nil
